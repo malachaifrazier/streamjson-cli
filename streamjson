@@ -1,3 +1,32 @@
-#!/bin/sh
+#!/usr/bin/env ruby
 
-node app.js
+require "trollop"
+
+class StreamJSON
+    attr_accessor :action
+    
+    def initialize(action)
+        @action = action
+    end
+    
+    def execute
+        if action == "list"
+            # List videos.
+        elsif action == "detail"
+            # Details on the video.
+        elsif action == "play"
+            # Play the video.
+        else
+            # Error.
+        end
+    end
+end
+
+if __FILE__ == $0
+    opts = Trollop::options do
+        version "streamjson 0.1 (c) 2012 Nathan Campos"
+        banner "The awesome stream.json client for your awesome command-line."
+        
+        opt :list, "List the videos", :short => "-l"
+    end
+end
