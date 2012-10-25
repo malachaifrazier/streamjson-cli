@@ -1,17 +1,18 @@
 #!/usr/bin/env ruby
 
-require "trollop"
+require 'optparse'
 
 class StreamJSON
     attr_accessor :action
     
-    def initialize(action)
+    def initialize(action = nil)
         @action = action
     end
     
     def execute
         if action == "list"
             # List videos.
+            puts "List videos."
         elsif action == "detail"
             # Details on the video.
         elsif action == "play"
@@ -23,10 +24,34 @@ class StreamJSON
 end
 
 if __FILE__ == $0
-    opts = Trollop::options do
-        version "streamjson 0.1 (c) 2012 Nathan Campos"
-        banner "The awesome stream.json client for your awesome command-line."
+    streamjson = StreamJSON.new
+    
+    opt_parser = OptionParser.new do |opt|
+        opt.version = "streamjson 0.1 (c) 2012 Nathan Campos\nThe awesome stream.json client for your awesome command-line."
+        opt.banner = "Usage: streamjson option [id]"
+        opt.separator ""
+        opt.separator "Options"
         
-        opt :list, "List the videos", :short => "-l"
+        # List videos
+        opt.on("-l", "--list", "List videos") do
+            streamjson.action = "list"
+            streamjson.execute()
+        end
+        
+        # Usage
+        opt.on("-h", "--help", "Help") do
+            puts opt_parser
+        end
+        
+        opt.separator ""
+        opt.separator "ID"
+        opt.separator "    Only used to play or show the description of a video."
+        opt.separator "    ID of the video or Number on the --list"
+    end
+    
+    if ARGV[0].nil?
+        puts opt_parser
+    else
+        opt_parser.parse!
     end
 end
