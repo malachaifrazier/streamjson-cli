@@ -20,11 +20,9 @@ end
 
 class StreamJSON
     attr_accessor :server_location
-    attr_accessor :id
     
-    def initialize(server_location = "http://localhost:4881", id = nil)
+    def initialize(server_location = "http://localhost:4881")
         @server_location = server_location
-        @id = id
     end
     
     private
@@ -35,14 +33,27 @@ class StreamJSON
         JSON.parse resp.body
     end
     
-    def put_video_detail(videos)
+    public
+    def list
+        # List videos.
+        puts "Videos"
+        
+        videos = get_video_list
+        videos["video"].each_with_index do |curr_video, index|
+            print "    ", "#{index} ", "(#{curr_video["id"]})".cyan, ": ", "#{curr_video["title"]}".bold, "\n"
+        end
+    end
+    
+    def detail(id)
+        # Details on the video.
+        videos = get_video_list["video"]
         selected = nil
         
-        if @id.valid_float?
-            selected = videos[@id.to_i]
-        elsif @id.is_a? String
+        if id.valid_float?
+            selected = videos[id.to_i]
+        elsif id.is_a? String
             selected = videos.select do |key, hash|
-                key["id"] == @id
+                key["id"] == id
             end
             selected = selected[0]
         else
@@ -60,25 +71,13 @@ class StreamJSON
         end
     end
     
-    public
-    def list
-        # List videos.
-        puts "Videos"
-        
-        videos = get_video_list
-        videos["video"].each_with_index do |curr_video, index|
-            print "    ", "#{index} ", "(#{curr_video["id"]})".cyan, ": ", "#{curr_video["title"]}".bold, "\n"
-        end
-    end
-    
-    def detail
-        # Details on the video.
-        videos = get_video_list["video"]
-        put_video_detail videos
-    end
-    
-    def play
+    def play(id)
         # Play video.
+        url = "#{@server_location}/getVideo/#{id}"
+        resp = Net::HTTP.get_response URI.parse(url)
+        video_location = JSON.parse resp.body
+        
+        exec "mplayer -fs #{video_location}"
     end
 end
 
