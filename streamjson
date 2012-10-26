@@ -7,6 +7,8 @@ require 'json'
 require 'term/ansicolor'
 
 class String
+    include Term::ANSIColor
+
     def valid_float?
         true if Float self rescue false
     end
@@ -18,12 +20,10 @@ end
 
 class StreamJSON
     attr_accessor :server_location
-    attr_accessor :action
     attr_accessor :id
     
-    def initialize(server_location = "http://localhost:4881", action = nil, id = nil)
+    def initialize(server_location = "http://localhost:4881", id = nil)
         @server_location = server_location
-        @action = action
         @id = id
     end
     
@@ -55,30 +55,30 @@ class StreamJSON
         else
             # Show the details
             # TODO: Display ANSI of the poster.
-            print Color.bold, selected["title"], Color.clear, "\n"
+            print Color.bold, selected["title"], Color.clear, "\n\n"
             puts selected["description"]["text"]
         end
     end
     
     public
-    def execute
-        if action == "list"
-            # List videos.
-            puts "Videos"
-            
-            videos = get_video_list
-            videos["video"].each_with_index do |curr_video, index|
-                puts "    #{index} (#{curr_video["id"]}): #{curr_video["title"]}"
-            end
-        elsif action == "detail"
-            # Details on the video.
-            videos = get_video_list["video"]
-            put_video_detail videos
-        elsif action == "play"
-            # Play the video.
-        else
-            # Error.
+    def list
+        # List videos.
+        puts "Videos"
+        
+        videos = get_video_list
+        videos["video"].each_with_index do |curr_video, index|
+            print "    ", "#{index} ", "(#{curr_video["id"]})".cyan, ": ", "#{curr_video["title"]}".bold, "\n"
         end
+    end
+    
+    def detail
+        # Details on the video.
+        videos = get_video_list["video"]
+        put_video_detail videos
+    end
+    
+    def play
+        # Play video.
     end
 end
 
@@ -93,15 +93,17 @@ if __FILE__ == $0
         
         # List videos
         opt.on("-l", "--list", "List videos") do
-            streamjson.action = "list"
-            streamjson.execute
+            streamjson.list
         end
         
         # Detail video.
         opt.on("-d", "--detail id", "Display details of a video") do |id|
-            streamjson.action = "detail"
-            streamjson.id = id
-            streamjson.execute
+            streamjson.detail id
+        end
+        
+        # Play video.
+        opt.on("-p", "--play id", "Plays the video") do |id|
+            streamjson.play id
         end
         
         # Usage
