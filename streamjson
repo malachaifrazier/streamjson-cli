@@ -27,18 +27,22 @@ class StreamJSON
     
     private
     def get_video_list
-        url = "#{@server_location}/list"
+        url = "#{@server_location}/lists"
         resp = Net::HTTP.get_response URI.parse(url)
         
-        JSON.parse resp.body
+        if resp.kind_of? Net::HTTPOK
+            JSON.parse resp.body
+        else
+            abort "Could not connect to the stream.json server."
+        end
     end
     
     public
     def list
         # List videos.
-        puts "Videos"
-        
         videos = get_video_list
+        
+        puts "Videos"
         videos["video"].each_with_index do |curr_video, index|
             print "    ", "#{index} ", "(#{curr_video["id"]})".cyan, ": ", "#{curr_video["title"]}".bold, "\n"
         end
