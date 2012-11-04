@@ -3,8 +3,13 @@
 require 'rubygems'
 require 'optparse'
 require 'net/http'
+require 'uri'
 require 'json'
 require 'term/ansicolor'
+require 'open-uri'
+require 'tempfile'
+require 'mime/types'
+require 'ascii-image'
 
 class String
     include Term::ANSIColor
@@ -18,6 +23,10 @@ class Color
     extend Term::ANSIColor
 end
 
+#class Config
+#    
+#end
+
 class StreamJSON
     attr_accessor :server_location
     
@@ -27,11 +36,29 @@ class StreamJSON
     
     private
     def get_video_list
-        url = "#{@server_location}/lists"
+        url = "#{@server_location}/list"
         resp = Net::HTTP.get_response URI.parse(url)
         
         if resp.kind_of? Net::HTTPOK
             JSON.parse resp.body
+        else
+            abort "Could not connect to the stream.json server."
+        end
+    end
+    
+    def store_tmp_poster(id)
+        uri = URI.parse "#{@server_location}/getPoster/#{id}"
+        http = Net::HTTP.new(uri.host, uri.port)
+        resp = http.get(uri.path)
+        
+        if resp.kind_of? Net::HTTPOK
+            #resp.body
+            ext = MIME::Types[resp["content-type"]].first.extensions.first
+            
+            File.open("/tmp/streamjson_#{id}.#{ext}", "wb+") do |file|
+                file.write resp.body
+                return file.path
+            end
         else
             abort "Could not connect to the stream.json server."
         end
@@ -69,8 +96,12 @@ class StreamJSON
             puts "You've entered a ID that doesn't exist on the list."
         else
             # Show the details
-            # TODO: Display ANSI of the poster.
-            print Color.bold, selected["title"], Color.clear, "\n\n"
+            print Color.bold, selected["title"], Color.clear, "\n"
+            
+            poster = ASCII_Image.new store_tmp_poster(selected["id"])
+            poster.build 15
+            print "\n"
+            
             puts selected["description"]["text"]
         end
     end
