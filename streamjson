@@ -146,9 +146,23 @@ class StreamJSON
     
     def play(id)
         # Play video.
-        url = "#{@server_location}/getVideo/#{id}"
+        videos = get_video_list["video"]
+        selected = nil
+        
+        if id.valid_float?
+            selected = videos[id.to_i]
+        elsif id.is_a? String
+            selected = videos.select do |key, hash|
+                key["id"] == id
+            end
+            selected = selected[0]
+        else
+            puts "You've entered a invalid ID."
+        end
+        
+        url = "#{@server_location}/getVideo/#{selected['id']}"
         resp = Net::HTTP.get_response URI.parse(url)
-        video_location = JSON.parse resp.body
+        video_location = resp.body
         
         exec "#{@player_command} #{video_location}"
     end
