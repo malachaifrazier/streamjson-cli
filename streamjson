@@ -1,4 +1,4 @@
-#!/usr/bin/env ruby -w0
+#!/usr/bin/env ruby -W0
 
 require 'rubygems'
 require 'optparse'
