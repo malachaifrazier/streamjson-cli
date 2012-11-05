@@ -2,6 +2,8 @@
 
 require 'rubygems'
 require 'optparse'
+require 'xdg'
+require 'parseconfig'
 require 'net/http'
 require 'uri'
 require 'json'
@@ -23,15 +25,51 @@ class Color
     extend Term::ANSIColor
 end
 
-#class Config
-#    
-#end
+class Configuration
+    def initialize
+        @config_dir = File.join(XDG["CONFIG_HOME"].to_s, "streamjson")
+        @config_file = File.join(@config_dir, "main.conf")
+        
+        if !File.exists? @config_dir
+            Dir.mkdir @config_dir
+        end
+    end
+
+    def set(server_location, player_command)
+        if !File.exists? @config_file
+            File.open(@config_file, "w+") do |file|
+                file.write ""
+            end
+        end
+        
+        config = ParseConfig.new(@config_file)
+        config.add_to_group "server", "location", server_location
+        config.add_to_group "player", "command", player_command
+        
+        File.open(@config_file, "w+") do |file|
+            config.write file
+        end
+        
+        return config.params
+    end
+    
+    def get
+        if !File.exists? @config_file
+            abort "Looks like you still haven't configured the client. Please run 'streamjson --configure <server location> <player command>'"
+        end
+        
+        config = ParseConfig.new(@config_file)
+        return { "server_location" => config["server"]["location"], "player_command" => config["player"]["command"] }
+    end
+end
 
 class StreamJSON
     attr_accessor :server_location
     
-    def initialize(server_location = "http://localhost:4881")
-        @server_location = server_location
+    def initialize
+        @config = Configuration.new
+        @server_location = @config.get["server_location"]
+        @player_command = @config.get["player_command"]
     end
     
     private
@@ -112,32 +150,35 @@ class StreamJSON
         resp = Net::HTTP.get_response URI.parse(url)
         video_location = JSON.parse resp.body
         
-        exec "mplayer -fs #{video_location}"
+        exec "#{@player_command} #{video_location}"
     end
 end
 
 if __FILE__ == $0
-    streamjson = StreamJSON.new
-    
     opt_parser = OptionParser.new do |opt|
         opt.version = "streamjson 0.1 (c) 2012 Nathan Campos\nThe awesome stream.json client for your awesome command-line."
-        opt.banner = "Usage: streamjson option [id]"
+        opt.banner = "Usage: streamjson option [id] [server_location | player_command]"
         opt.separator ""
         opt.separator "Options"
         
         # List videos
         opt.on("-l", "--list", "List videos") do
-            streamjson.list
+            StreamJSON.new.list
         end
         
         # Detail video.
         opt.on("-d", "--detail id", "Display details of a video") do |id|
-            streamjson.detail id
+            StreamJSON.new.detail id
         end
         
         # Play video.
         opt.on("-p", "--play id", "Plays the video") do |id|
-            streamjson.play id
+            StreamJSON.new.play id
+        end
+        
+        # Configure the client.
+        opt.on("-c", "--configure server_location player_command", "Configure the client") do
+            Configuration.new.set ARGV[1], ARGV[2]
         end
         
         # Usage
@@ -149,6 +190,6 @@ if __FILE__ == $0
     if ARGV[0].nil?
         puts opt_parser
     else
-        opt_parser.parse!
+        opt_parser.parse ARGV
     end
 end
